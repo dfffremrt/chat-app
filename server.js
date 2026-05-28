@@ -6,12 +6,12 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-    maxHttpBufferSize: 1e8 // 100MB для голосовых сообщений
+    maxHttpBufferSize: 1e8 // 100MB для фото и голоса
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Хранилище сообщений (в памяти)
+// Хранилище сообщений
 const messages = [];
 const users = new Set();
 const MAX_MESSAGES = 100;
@@ -70,6 +70,25 @@ io.on('connection', (socket) => {
             if (messages.length > MAX_MESSAGES) messages.shift();
             io.emit('voice message', messageData);
             console.log(`Голосовое сообщение от ${socket.username}, длительность: ${data.duration} сек`);
+        }
+    });
+    
+    // Фото сообщения
+    socket.on('photo message', (data) => {
+        if (socket.username && data.photoData && data.photoData.length > 0) {
+            const messageData = {
+                id: Date.now(),
+                username: socket.username,
+                photoData: data.photoData,
+                caption: data.caption || '',
+                timestamp: new Date().toISOString(),
+                type: 'photo'
+            };
+            
+            messages.push(messageData);
+            if (messages.length > MAX_MESSAGES) messages.shift();
+            io.emit('photo message', messageData);
+            console.log(`Фото от ${socket.username}`);
         }
     });
     
